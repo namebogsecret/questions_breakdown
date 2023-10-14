@@ -13,10 +13,10 @@ import chardet
 
 
 model="gpt-3.5-turbo" # "gpt-4", #"gpt-3.5-turbo",
-max_depth = 1
+max_depth = 2
 max_gpt4_depth = 0
 time_prefix = time()
-query = "Как сделать лодку из дерева (немного плотничаю и слесарничаю)"
+query = "Как сделать что бы лодка , сделанная самостоятельно, из дерева (немного плотничаю и слесарничаю)"
 #"Как найти высокооплаиваемую работу в англии или канаде, если я сейчас работаю на себе в качестве репетитора по физике и математике, так же увлекаюсь программированием."
 #"Разработай подробнейший план создания художественного произведения, которое будет вдохновлять людей. Я еще не писал книг. И не знаю как это делать."
 #"Создай подробный план становления миллиардером. Сейчас я мужчина 40 лет, жена трое детей. Работаю на себя - репетитор по физике и математике. Остается после аренды не много. Но есть несколько вложений, которые стараюсь не трогать. Есть навыки программирования, столярного дела, работы в фотошопе, организации мероприятей с изначально горячей аудиторией, бегал марафон, ходил на тренинг по маркетингу (но ничего не получилось продать), пробовал продвигать себя сам - тоже без результата, написал бота, который ищет мне новых учеников. Нужен подробнейший план действий, чтобы стать миллиардером."
@@ -46,15 +46,16 @@ def save_to_file(data, filename='results.json'):
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 #функция с несколькими аргументами
-def task_brakedown(main_query, ancestors_of_queries, depth, **kwargs):
-
-    for key in kwargs:
-        print(kwargs[key]["step"])
-        if "need_futher_breakdown" in kwargs[key] and kwargs[key]["need_futher_breakdown"] and depth <= max_depth:
-            kwargs[key]["SubSteps"] = Breakdown(f"{kwargs[key]['step']} (this is a step in brakedown of this task: ///{main_query}///. Do not include steps from this list ///{all_steps}///) This step is the brakedown of this previous steps: //{ancestors_of_queries}//", ancestors_of_queries=f"{ancestors_of_queries} -> {kwargs[key]['step']}", depth=depth, main_query=main_query, model=model if depth <= max_gpt4_depth else "gpt-3.5-turbo", temperature=temperature)
+def task_brakedown(main_query, ancestors_of_queries, depth, steps_list):
+    # Ваш код здесь
+    for i, step in enumerate(steps_list):  # Добавьте enumerate()
+        print(step["step"])
+        if "need_futher_breakdown" in step and step["need_futher_breakdown"] and depth <= max_depth:
+            steps_list[i]["SubSteps"] = Breakdown(f"{step['step']} (this is a step in brakedown of this task: ///{main_query}///. Do not include steps from this list ///{all_steps}///) This step is the brakedown of this previous steps: //{ancestors_of_queries}//", ancestors_of_queries=f"{ancestors_of_queries} -> {step['step']}", depth=depth, main_query=main_query, model=model if depth <= max_gpt4_depth else "gpt-3.5-turbo", temperature=temperature)
         else:
-            kwargs[key]["SubSteps"] = {}
-    return kwargs
+            steps_list[i]["SubSteps"] = {}
+    return steps_list
+
 
 def decode_string(encoded_str):
     # Проверка типа входных данных
@@ -81,195 +82,35 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
     global time_prefix
     global all_steps
     # Шаг 1: Определить функции, которые модель может вызвать
-    """{
-  "name": "task_brakedown",
-  "description": "...",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "steps": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "step": {
-              "type": "string",
-              "description": "step description"
-            },
-            "need_futher_breakdown": {
-              "type": "boolean",
-              "description": "if True - this subtask need futher breakdown to subtasks."
-            }
-          },
-          "required": ["step", "need_futher_breakdown"]
-        }
-      }
-    },
-    "required": ["steps"]
-  }
-}
-"""
+
     functions = [
         {
-            "name": "task_brakedown",
-            "description": "Detailed steps by step brakedown of the task (some steps could be None, if you do not need all 10 steps). Wright each step so that it can be fully understood by a person who is not familiar with the task or other steps. No long answers, there will be futher breakdowns on subtasks. Write in russian.",
-            "parameters": {
+        "name": "task_brakedown",
+        "description": "Detailed steps by step brakedown of the task. Write each step so that it can be fully understood by a person who is not familiar with the task or other steps. No long answers, there will be futher breakdowns on subtasks. Write in russian.",
+        "parameters": {
             "type": "object",
             "properties": {
-                "step1": {
-                    "type": "object",
-                    "description": "first step",
-                    "properties": {
-                        "step": {
-                            "type": "string",
-                            "description": "step description",
-                        },
-                        "need_futher_breakdown": {
-                            "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
-                        },
+            "steps": {
+                "type": "array",
+                "items": {
+                "type": "object",
+                "properties": {
+                    "step": {
+                    "type": "string",
+                    "description": "step description"
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "need_futher_breakdown": {
+                    "type": "boolean",
+                    "description": "if True - this subtask need futher breakdown to subtasks."
+                    }
                 },
-                "step2": {
-                    "type": "object",
-                    "description": "second step",
-                    "properties": {
-                        "step": {
-                            "type": "string",
-                            "description": "step description",
-                        },
-                        "need_futher_breakdown": {
-                            "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
-                        },
-                    },
-                    "required": ["step", "need_futher_breakdown"],
-                },
-                "step3": {
-                    "type": "object",
-                    "description": "third step",
-                    "properties": {
-                        "step": {
-                            "type": "string",
-                            "description": "step description",
-                        },
-                        "need_futher_breakdown": {
-                            "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
-                        },
-                    },
-                    "required": ["step", "need_futher_breakdown"],
-                },
-                "step4": {
-                    "type": "object",
-                    "description": "fourth step",
-                    "properties": {
-                        "step": {
-                            "type": "string",
-                            "description": "step description",
-                        },
-                        "need_futher_breakdown": {
-                            "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
-                        },
-                    },
-                    "required": ["step", "need_futher_breakdown"],
-                },
-                "step5": {
-                    "type": "object",
-                    "description": "fifth step",
-                    "properties": {
-                        "step": {
-                            "type": "string",
-                            "description": "step description",
-                        },
-                        "need_futher_breakdown": {
-                            "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
-                        },
-                    },
-                    "required": ["step", "need_futher_breakdown"],
-                },
-                "step6": {
-                    "type": "object",
-                    "description": "sixth step",
-                    "properties": {
-                        "step": {
-                            "type": "string",
-                            "description": "step description",
-                        },
-                        "need_futher_breakdown": {
-                            "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
-                        },
-                    },
-                    "required": ["step", "need_futher_breakdown"],
-                },
-                "step7": {
-                    "type": "object",
-                    "description": "seventh step",
-                    "properties": {
-                        "step": {
-                            "type": "string",
-                            "description": "step description",
-                        },
-                        "need_futher_breakdown": {
-                            "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
-                        },
-                    },
-                    "required": ["step", "need_futher_breakdown"],
-                },
-                "step8": {
-                    "type": "object",
-                    "description": "eighth step",
-                    "properties": {
-                        "step": {
-                            "type": "string",
-                            "description": "step description",
-                        },
-                        "need_futher_breakdown": {
-                            "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
-                        },
-                    },
-                    "required": ["step", "need_futher_breakdown"],
-                },
-                "step9": {
-                    "type": "object",
-                    "description": "ninth step",
-                    "properties": {
-                        "step": {
-                            "type": "string",
-                            "description": "step description",
-                        },
-                        "need_futher_breakdown": {
-                            "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
-                        },
-                    },
-                    "required": ["step", "need_futher_breakdown"],
-                },
-                "step10": {
-                    "type": "object",
-                    "description": "tenth step",
-                    "properties": {
-                        "step": {
-                            "type": "string",
-                            "description": "step description",
-                        },
-                        "need_futher_breakdown": {
-                            "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
-                        },
-                    },
-                    "required": ["step", "need_futher_breakdown"],
-                },
+                "required": ["step", "need_futher_breakdown"]
                 }
+            }
             },
-            "required": ["step1", "step2", "step3", "step4", "step5, step6, step7, step8, step9, step10"],
-        },
+            "required": ["steps"]
+        }
+    },
     ]
     
     
@@ -303,60 +144,51 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
     function_call_args = response_content.get("function_call", {}).get("arguments", None)
     #print(f" function_call_args: {function_call_args}")
     if function_call_args is not None:
+
         try:
-            steps = json.loads(function_call_args)
-            for step in steps:
-                steps[step]["step"] = decode_string(steps[step]["step"])
-            #.encode('utf-8').decode('unicode_escape')
-            #print(f" steps: {steps}")
-        except json.JSONDecodeError:
-            steps = {}
-        """try:
             steps = json.loads(function_call_args)
             steps = steps["steps"]
         except json.JSONDecodeError:
-            steps = {}"""
+            steps = {}
 
     else:
         steps = {}
 
-    steps = {k: v for k, v in steps.items() if v["step"] not in all_steps}
-    """steps = [step for step in steps if step["step"] not in all_steps]"""
+    steps = [step for step in steps if step["step"] not in all_steps]
 
 
 
-    steps_list = [step_data["step"] for step_data in steps.values() if "step" in step_data]
-    """steps_list = [step_data["step"] for step_data in steps if "step" in step_data]"""
+    steps_list = [step_data["step"] for step_data in steps if "step" in step_data]
 
     save_to_file(steps_list, f'middle_results/{main_query[:15]}_{time_prefix}_{model}/{str(depth)}/{main_query[:15]}_{str(depth)}_{query[:15]}_{time()}.json')
     all_steps.extend(steps_list)
     print(f" steps: {steps}")
     if steps and len(steps) > 1:
-        kwargs = task_brakedown(main_query=main_query, ancestors_of_queries=ancestors_of_queries, depth = depth + 1, **steps)
+        kwargs = task_brakedown(main_query=main_query, ancestors_of_queries=ancestors_of_queries, depth = depth + 1, steps_list=steps)
         return kwargs
     return {}
     
 def print_steps(json_data, indent=0, prefix='', file=None):
-    """Рекурсивно печатает шаги из вложенного JSON-объекта.
+    if isinstance(json_data, list):  # Если json_data является списком
+        for i, step_dict in enumerate(json_data):
+            print_step_data(step_dict, indent, prefix, file)
+    elif isinstance(json_data, dict):  # Если json_data является словарем
+        print_step_data(json_data, indent, prefix, file)
+    else:
+        print("Неизвестный тип данных:", type(json_data))
 
-    Аргументы:
-    json_data -- словарь с шагами и подшагами
-    indent -- текущий уровень отступа
-    prefix -- текущий префикс для вертикальных линий
-    file -- файловый объект для записи вывода
-    """
-    keys = list(json_data.keys())
-    for i, key in enumerate(keys):
-        value = json_data[key]
-        is_last = i == len(keys) - 1
 
-        new_prefix = prefix + ('└── ' if is_last else '├── ')
+def print_step_data(step_dict, indent, prefix, file):
+    step = step_dict.get("step", "Неизвестный шаг")
+    need_further_breakdown = step_dict.get("need_futher_breakdown", False)
+    sub_steps = step_dict.get("SubSteps", {})
+    
+    print(f"{prefix}{step}", file=file)
+    
+    if need_further_breakdown and sub_steps:
+        next_prefix = prefix + '    '
+        print_steps(sub_steps, indent + 4, next_prefix, file)
 
-        print(prefix + new_prefix + value["step"], file=file)
-
-        if value.get("need_futher_breakdown"):
-            next_prefix = prefix + ('    ' if is_last else '│   ')
-            print_steps(value["SubSteps"], indent=indent + 4, prefix=next_prefix, file=file)
 
 # Пример использования
 #query = "Как изучить Английский самостоятельно, с нуля для русской мамы троих детей без возможности покупать курсы и онлайн курсы."

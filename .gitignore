@@ -3,3 +3,4 @@ middle_results
 venv
 .env
 results
+.DS_Store
