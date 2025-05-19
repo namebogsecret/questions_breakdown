@@ -34,7 +34,8 @@ def log_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = log_exception
 
 load_dotenv()
-all_steps = []
+# track all unique step descriptions to avoid duplicates
+all_steps: set[str] = set()
 openai.api_key = getenv("gpt_api")
 
 def save_to_file(data, filename='results.json'):
@@ -316,8 +317,14 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
     else:
         steps = {}
 
-    steps = {k: v for k, v in steps.items() if v["step"] not in all_steps}
-    """steps = [step for step in steps if step["step"] not in all_steps]"""
+    unique_steps = {}
+    seen_steps = set()
+    for k, v in steps.items():
+        step_desc = v.get("step")
+        if step_desc and step_desc not in all_steps and step_desc not in seen_steps:
+            unique_steps[k] = v
+            seen_steps.add(step_desc)
+    steps = unique_steps
 
 
 
@@ -325,7 +332,7 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
     """steps_list = [step_data["step"] for step_data in steps if "step" in step_data]"""
 
     save_to_file(steps_list, f'middle_results/{main_query[:15]}_{time_prefix}_{model}/{str(depth)}/{main_query[:15]}_{str(depth)}_{query[:15]}_{time()}.json')
-    all_steps.extend(steps_list)
+    all_steps.update(steps_list)
     print(f" steps: {steps}")
     if steps and len(steps) > 1:
         kwargs = task_brakedown(main_query=main_query, ancestors_of_queries=ancestors_of_queries, depth = depth + 1, **steps)
@@ -354,19 +361,17 @@ def print_steps(json_data, indent=0, prefix='', file=None):
             next_prefix = prefix + ('    ' if is_last else '│   ')
             print_steps(value["SubSteps"], indent=indent + 4, prefix=next_prefix, file=file)
 
-# Пример использования
-#query = "Как изучить Английский самостоятельно, с нуля для русской мамы троих детей без возможности покупать курсы и онлайн курсы."
-result = Breakdown(query, query, query, model = model, temperature=temperature)
-#print_steps(result)
-"""with open(f'result_{query[:100]}_{time()}.json', 'w', encoding='utf-8') as f:
-    json.dump(result, f, indent=4, ensure_ascii=False)"""
-print(json.dumps(result, indent=4, ensure_ascii=False))
-if not path.exists('results'):
-    makedirs('results')
-with open(f'results/{query[:40]}_{model}_t{temperature}_{time()}.json', 'w', encoding='utf-8') as f:
-    json.dump(result, f, ensure_ascii=False, indent=4)
-with open(f"results/{query[:40]}_{model}_t{temperature}_{time()}.txt", "w", encoding="utf-8") as f:
-    original_stdout = sys.stdout  # сохраняем оригинальный stdout
-    sys.stdout = f  # редиректим stdout в файл
-    print_steps(result)
-    sys.stdout = original_stdout  # возвращаем stdout обратно
+if __name__ == "__main__":
+    # Пример использования
+    # query = "Как изучить Английский самостоятельно..."
+    result = Breakdown(query, query, query, model=model, temperature=temperature)
+    print(json.dumps(result, indent=4, ensure_ascii=False))
+    if not path.exists('results'):
+        makedirs('results')
+    with open(f'results/{query[:40]}_{model}_t{temperature}_{time()}.json', 'w', encoding='utf-8') as f:
+        json.dump(result, f, ensure_ascii=False, indent=4)
+    with open(f"results/{query[:40]}_{model}_t{temperature}_{time()}.txt", "w", encoding="utf-8") as f:
+        original_stdout = sys.stdout  # сохраняем оригинальный stdout
+        sys.stdout = f  # редиректим stdout в файл
+        print_steps(result)
+        sys.stdout = original_stdout  # возвращаем stdout обратно
