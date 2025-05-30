@@ -1,18 +1,17 @@
 import sys
 import logging
-#import codecs
 from os import getenv, path, makedirs
 import json
 from time import time
+import argparse
 import openai
 
-#from collections import OrderedDict
 from dotenv import load_dotenv
 import chardet
 
 
 
-model="gpt-3.5-turbo" # "gpt-4", #"gpt-3.5-turbo",
+model = "gpt-3.5-turbo"
 max_depth = 1
 max_gpt4_depth = 0
 time_prefix = time()
@@ -362,16 +361,26 @@ def print_steps(json_data, indent=0, prefix='', file=None):
             print_steps(value["SubSteps"], indent=indent + 4, prefix=next_prefix, file=file)
 
 if __name__ == "__main__":
-    # Пример использования
-    # query = "Как изучить Английский самостоятельно..."
+    parser = argparse.ArgumentParser(description="Generate a task breakdown")
+    parser.add_argument("query", nargs="?", default=query, help="Main task description")
+    parser.add_argument("--model", default=model, help="OpenAI model to use")
+    parser.add_argument("--max-depth", type=int, default=max_depth, help="Max recursion depth")
+    parser.add_argument("--gpt4-depth", type=int, default=max_gpt4_depth, help="Depth to use GPT-4")
+    parser.add_argument("--temperature", type=float, default=temperature, help="Sampling temperature")
+    args = parser.parse_args()
+
+    model = args.model
+    max_depth = args.max_depth
+    max_gpt4_depth = args.gpt4_depth
+    temperature = args.temperature
+    query = args.query
+
     result = Breakdown(query, query, query, model=model, temperature=temperature)
     print(json.dumps(result, indent=4, ensure_ascii=False))
     if not path.exists('results'):
         makedirs('results')
-    with open(f'results/{query[:40]}_{model}_t{temperature}_{time()}.json', 'w', encoding='utf-8') as f:
+    filename_prefix = f"results/{query[:40]}_{model}_t{temperature}_{time()}"
+    with open(f"{filename_prefix}.json", "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=4)
-    with open(f"results/{query[:40]}_{model}_t{temperature}_{time()}.txt", "w", encoding="utf-8") as f:
-        original_stdout = sys.stdout  # сохраняем оригинальный stdout
-        sys.stdout = f  # редиректим stdout в файл
-        print_steps(result)
-        sys.stdout = original_stdout  # возвращаем stdout обратно
+    with open(f"{filename_prefix}.txt", "w", encoding="utf-8") as f:
+        print_steps(result, file=f)
