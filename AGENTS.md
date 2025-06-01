@@ -7,6 +7,9 @@ This repository contains simple scripts for generating task breakdowns using the
 - `print_rezults.py` – helper for printing saved JSON structures to a tree view. Run with a path to a JSON file.
 - `helpers/run_checks.sh` – basic syntax check script (`python -m py_compile`).
 - `helpers/data/` – contains auxiliary data like `sample_query.txt`.
+- `project-tracker.yaml` – detailed pipeline tracker for the telebot-constructor
+  project.
+- `project-overview.yaml` – high level overview and progress summary.
 - `run.sh` – standalone updater and launcher for Linux/macOS.
 - `run.ps1` – Windows PowerShell variant of `run.sh`.
 
