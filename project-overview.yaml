@@ -1,6 +1,6 @@
 meta:
   id: telebot-constructor
-  updated_at: 2025-06-01T11:15:00Z
+  updated_at: 2025-06-01T08:35:10Z
   owner: vladimir-podlevskikh
 
 idea:
@@ -36,5 +36,5 @@ idea:
 
 stage:
   current_phase: idea_to_tech_draft
-  progress_pct: 4
+  progress_pct: 6
 

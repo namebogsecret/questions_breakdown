@@ -1,6 +1,6 @@
 meta:
   id: telebot-constructor
-  updated_at: 2025-06-01T11:00:00Z
+  updated_at: 2025-06-01T08:35:10Z
   owner: vladimir-podlevskikh
 
 pipeline:
@@ -11,7 +11,7 @@ pipeline:
       "0.2": {desc: msc_backlog,           status: done,         assignee: vladimir}
       "0.3": {desc: stack_selection,       status: done,         assignee: vladimir}
       "0.4": {desc: ux_er_diagrams,        status: in_progress,  assignee: vladimir}
-      "0.5": {desc: repo_bootstrap,        status: not_started}
+      "0.5": {desc: repo_bootstrap,        status: done,         assignee: vladimir}
   - code: "1"
     name: solution_definition
     substeps:
