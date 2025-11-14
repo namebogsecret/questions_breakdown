@@ -3,3 +3,6 @@ middle_results
 venv
 .env
 results
+logs/
+*.pyc
+__pycache__/

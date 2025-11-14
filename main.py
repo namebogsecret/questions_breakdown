@@ -4,7 +4,7 @@ from os import getenv, path, makedirs
 import json
 from time import time
 import argparse
-import openai
+from openai import OpenAI
 
 from dotenv import load_dotenv
 import chardet
@@ -22,7 +22,7 @@ query = "Как сделать лодку из дерева (немного пл
 temperature=0.9
 
 # Настройка базового конфига логгера
-logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s', level=logging.ERROR)
+logging.basicConfig(filename='app.log', filemode='a', format='%(name)s - %(levelname)s - %(message)s', level=logging.ERROR)
 
 # Функция для логирования необработанных исключений
 def log_exception(exc_type, exc_value, exc_traceback):
@@ -35,19 +35,24 @@ sys.excepthook = log_exception
 load_dotenv()
 # track all unique step descriptions to avoid duplicates
 all_steps: set[str] = set()
-openai.api_key = getenv("gpt_api")
+
+# Validate and initialize OpenAI API key
+api_key = getenv("gpt_api")
+if not api_key:
+    raise ValueError("Environment variable 'gpt_api' is not set. Please create a .env file with gpt_api=your-api-key")
+client = OpenAI(api_key=api_key)
 
 def save_to_file(data, filename='results.json'):
     with open(filename, 'w', encoding='utf-8') as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 #функция с несколькими аргументами
-def task_brakedown(main_query, ancestors_of_queries, depth, **kwargs):
+def task_breakdown(main_query, ancestors_of_queries, depth, **kwargs):
 
     for key in kwargs:
         print(kwargs[key]["step"])
-        if "need_futher_breakdown" in kwargs[key] and kwargs[key]["need_futher_breakdown"] and depth <= max_depth:
-            kwargs[key]["SubSteps"] = Breakdown(f"{kwargs[key]['step']} (this is a step in brakedown of this task: ///{main_query}///. Do not include steps from this list ///{all_steps}///) This step is the brakedown of this previous steps: //{ancestors_of_queries}//", ancestors_of_queries=f"{ancestors_of_queries} -> {kwargs[key]['step']}", depth=depth, main_query=main_query, model=model if depth <= max_gpt4_depth else "gpt-3.5-turbo", temperature=temperature)
+        if "need_further_breakdown" in kwargs[key] and kwargs[key]["need_further_breakdown"] and depth <= max_depth:
+            kwargs[key]["SubSteps"] = Breakdown(f"{kwargs[key]['step']} (this is a step in breakdown of this task: ///{main_query}///. Do not include steps from this list ///{all_steps}///) This step is the breakdown of this previous steps: //{ancestors_of_queries}//", ancestors_of_queries=f"{ancestors_of_queries} -> {kwargs[key]['step']}", depth=depth, main_query=main_query, model=model if depth <= max_gpt4_depth else "gpt-3.5-turbo", temperature=temperature)
         else:
             kwargs[key]["SubSteps"] = {}
     return kwargs
@@ -77,38 +82,10 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
     global time_prefix
     global all_steps
     # Шаг 1: Определить функции, которые модель может вызвать
-    """{
-  "name": "task_brakedown",
-  "description": "...",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "steps": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "step": {
-              "type": "string",
-              "description": "step description"
-            },
-            "need_futher_breakdown": {
-              "type": "boolean",
-              "description": "if True - this subtask need futher breakdown to subtasks."
-            }
-          },
-          "required": ["step", "need_futher_breakdown"]
-        }
-      }
-    },
-    "required": ["steps"]
-  }
-}
-"""
     functions = [
         {
-            "name": "task_brakedown",
-            "description": "Detailed steps by step brakedown of the task (some steps could be None, if you do not need all 10 steps). Wright each step so that it can be fully understood by a person who is not familiar with the task or other steps. No long answers, there will be futher breakdowns on subtasks. Write in russian.",
+            "name": "task_breakdown",
+            "description": "Detailed steps by step breakdown of the task (some steps could be None, if you do not need all 10 steps). Write each step so that it can be fully understood by a person who is not familiar with the task or other steps. No long answers, there will be further breakdowns on subtasks. Write in russian.",
             "parameters": {
             "type": "object",
             "properties": {
@@ -120,12 +97,12 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
                             "type": "string",
                             "description": "step description",
                         },
-                        "need_futher_breakdown": {
+                        "need_further_breakdown": {
                             "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
+                            "description": "if True - this subtask need further breakdown to subtasks.",
                         },
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "required": ["step", "need_further_breakdown"],
                 },
                 "step2": {
                     "type": "object",
@@ -135,12 +112,12 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
                             "type": "string",
                             "description": "step description",
                         },
-                        "need_futher_breakdown": {
+                        "need_further_breakdown": {
                             "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
+                            "description": "if True - this subtask need further breakdown to subtasks.",
                         },
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "required": ["step", "need_further_breakdown"],
                 },
                 "step3": {
                     "type": "object",
@@ -150,12 +127,12 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
                             "type": "string",
                             "description": "step description",
                         },
-                        "need_futher_breakdown": {
+                        "need_further_breakdown": {
                             "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
+                            "description": "if True - this subtask need further breakdown to subtasks.",
                         },
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "required": ["step", "need_further_breakdown"],
                 },
                 "step4": {
                     "type": "object",
@@ -165,12 +142,12 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
                             "type": "string",
                             "description": "step description",
                         },
-                        "need_futher_breakdown": {
+                        "need_further_breakdown": {
                             "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
+                            "description": "if True - this subtask need further breakdown to subtasks.",
                         },
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "required": ["step", "need_further_breakdown"],
                 },
                 "step5": {
                     "type": "object",
@@ -180,12 +157,12 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
                             "type": "string",
                             "description": "step description",
                         },
-                        "need_futher_breakdown": {
+                        "need_further_breakdown": {
                             "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
+                            "description": "if True - this subtask need further breakdown to subtasks.",
                         },
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "required": ["step", "need_further_breakdown"],
                 },
                 "step6": {
                     "type": "object",
@@ -195,12 +172,12 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
                             "type": "string",
                             "description": "step description",
                         },
-                        "need_futher_breakdown": {
+                        "need_further_breakdown": {
                             "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
+                            "description": "if True - this subtask need further breakdown to subtasks.",
                         },
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "required": ["step", "need_further_breakdown"],
                 },
                 "step7": {
                     "type": "object",
@@ -210,12 +187,12 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
                             "type": "string",
                             "description": "step description",
                         },
-                        "need_futher_breakdown": {
+                        "need_further_breakdown": {
                             "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
+                            "description": "if True - this subtask need further breakdown to subtasks.",
                         },
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "required": ["step", "need_further_breakdown"],
                 },
                 "step8": {
                     "type": "object",
@@ -225,12 +202,12 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
                             "type": "string",
                             "description": "step description",
                         },
-                        "need_futher_breakdown": {
+                        "need_further_breakdown": {
                             "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
+                            "description": "if True - this subtask need further breakdown to subtasks.",
                         },
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "required": ["step", "need_further_breakdown"],
                 },
                 "step9": {
                     "type": "object",
@@ -240,12 +217,12 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
                             "type": "string",
                             "description": "step description",
                         },
-                        "need_futher_breakdown": {
+                        "need_further_breakdown": {
                             "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
+                            "description": "if True - this subtask need further breakdown to subtasks.",
                         },
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "required": ["step", "need_further_breakdown"],
                 },
                 "step10": {
                     "type": "object",
@@ -255,16 +232,16 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
                             "type": "string",
                             "description": "step description",
                         },
-                        "need_futher_breakdown": {
+                        "need_further_breakdown": {
                             "type": "boolean",
-                            "description": "if True - this subtask need futher breakdown to subtasks.",
+                            "description": "if True - this subtask need further breakdown to subtasks.",
                         },
                     },
-                    "required": ["step", "need_futher_breakdown"],
+                    "required": ["step", "need_further_breakdown"],
                 },
                 }
             },
-            "required": ["step1", "step2", "step3", "step4", "step5, step6, step7, step8, step9, step10"],
+            "required": ["step1", "step2", "step3", "step4", "step5", "step6", "step7", "step8", "step9", "step10"],
         },
     ]
     
@@ -280,23 +257,28 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
     
     # Шаг 3: Вызвать модель
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=model, # "gpt-4", #"gpt-3.5-turbo",
             messages=messages,
-            functions=functions,
-            function_call={"name": "task_brakedown"},
+            tools=[{
+                "type": "function",
+                "function": functions[0]
+            }],
+            tool_choice={"type": "function", "function": {"name": "task_breakdown"}},
             temperature=temperature
         )
     except Exception as e:
         print(f"Exception: {e}")
         save_to_file(f"Error: {e}", f'middle_results/{main_query[:15]}_{time_prefix}_{model}/{str(depth)}/{main_query[:15]}_{str(depth)}_{query[:15]}_{time()}.json')
-    
+
         return {}
     # Шаг 4: Обработать ответ
     #print(f" response: {response}")
-    response_content = response["choices"][0]["message"]
+    response_content = response.choices[0].message
     #print(f" response_content: {response_content}")
-    function_call_args = response_content.get("function_call", {}).get("arguments", None)
+    # Get tool calls from the response (new API format)
+    tool_calls = response_content.tool_calls
+    function_call_args = tool_calls[0].function.arguments if tool_calls else None
     #print(f" function_call_args: {function_call_args}")
     if function_call_args is not None:
         try:
@@ -307,11 +289,6 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
             #print(f" steps: {steps}")
         except json.JSONDecodeError:
             steps = {}
-        """try:
-            steps = json.loads(function_call_args)
-            steps = steps["steps"]
-        except json.JSONDecodeError:
-            steps = {}"""
 
     else:
         steps = {}
@@ -334,7 +311,7 @@ def Breakdown(query, main_query, ancestors_of_queries, model = "gpt-3.5-turbo", 
     all_steps.update(steps_list)
     print(f" steps: {steps}")
     if steps and len(steps) > 1:
-        kwargs = task_brakedown(main_query=main_query, ancestors_of_queries=ancestors_of_queries, depth = depth + 1, **steps)
+        kwargs = task_breakdown(main_query=main_query, ancestors_of_queries=ancestors_of_queries, depth = depth + 1, **steps)
         return kwargs
     return {}
     
@@ -356,7 +333,7 @@ def print_steps(json_data, indent=0, prefix='', file=None):
 
         print(prefix + new_prefix + value["step"], file=file)
 
-        if value.get("need_futher_breakdown"):
+        if value.get("need_further_breakdown"):
             next_prefix = prefix + ('    ' if is_last else '│   ')
             print_steps(value["SubSteps"], indent=indent + 4, prefix=next_prefix, file=file)
 

@@ -1,40 +1,44 @@
 meta:
-  id: telebot-constructor
-  updated_at: 2025-06-01T08:35:10Z
-  owner: vladimir-podlevskikh
+  id: questions-breakdown
+  updated_at: 2025-11-14T00:00:00Z
+  owner: namebogsecret
 
 idea:
   summary: >
-    Low-code platform that lets non-programmers visually assemble full-featured
-    Telegram bots by snapping together pre-built blocks and deploy them to the
-    cloud in one click.
+    Automated task breakdown system that uses OpenAI GPT API to recursively
+    decompose complex tasks into hierarchical steps. The system intelligently
+    analyzes tasks and breaks them down into actionable subtasks.
   current_state:
     description: >
-      Proof-of-Concept stage: core drag-and-drop editor works, bots authenticate
-      via token, flows run locally through a docker-compose sandbox.
+      Working prototype that uses OpenAI API to recursively break down tasks
+      into subtasks. Supports configurable depth, multiple GPT models, and
+      outputs results in both JSON and tree-formatted text files.
     capabilities:
-      - visual_flow_editor (start, message, buttons, media)
-      - token_based_auth + BotFather auto_registration
-      - live_preview_in_editor
-      - json_import_export
-      - local_docker_compose_smoke_stack
+      - recursive_task_breakdown via GPT API
+      - configurable_recursion_depth (max_depth, gpt4_depth)
+      - duplicate_step_detection
+      - intermediate_results_saving
+      - json_and_text_output
+      - cli_interface with argparse
+      - utf8_encoding_detection with chardet
   planned_state:
     description: >
-      First public beta with marketplace, collaborative editing, managed
-      hosting and AI-powered block suggestions.
+      Enhanced version with better error handling, modern OpenAI API,
+      structured logging, and improved architecture.
     capabilities:
-      - community_block_marketplace (payments, AI, CRM, analytics)
-      - one_click_deploy (AWS / Fly.io) with HTTPS & auto_scaling
-      - multi_user_collaboration (RBAC)
-      - usage_analytics_dashboard
-      - ai_block_recommendations
+      - modern_openai_api_client (v1.0+)
+      - comprehensive_error_handling
+      - structured_logging
+      - unit_and_integration_tests
+      - token_usage_tracking
+      - cost_estimation
+      - configuration_file_support
   nuance_notes:
-    - low_code / zero_code target
-    - target_webhook_ttfb < 200 ms
-    - multi_tenant_day_one
-    - gdpr_compliant_data_retention
+    - supports_russian_language
+    - recursive_depth_control
+    - intermediate_results_for_debugging
+    - duplicate_detection_across_hierarchy
 
 stage:
-  current_phase: idea_to_tech_draft
-  progress_pct: 6
-
+  current_phase: prototype_to_production
+  progress_pct: 40
